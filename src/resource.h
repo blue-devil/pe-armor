@@ -1,5 +1,6 @@
+// Resource IDs used by the recreated PE-Armor vx.xx packer
 #define IDR_MANIFEST            1
-#define IDI_APP                 112
+#define IDI_APP                 1
 
 #define IDD_MAIN                101
 #define IDD_ABOUT               103
@@ -31,7 +32,9 @@
 #define IDC_MEMORYSHIELD        1022
 #define IDC_BLACKLISTSCAN       1023
 #define IDC_HEADERSHIELD        1024
+#define IDC_STRIPDEBUG         1030
 
 // controls: about
+#define IDC_ABOUTICON           1007
 #define IDC_ABOUTBOOK           1009
 #define IDC_ABOUTFORUM          1010

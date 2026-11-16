@@ -1,10 +1,43 @@
-// PE-Armor vx.xx recreated resources (exact original templates)
+// PE-Armor vx.xy
 #pragma code_page(65001)
 #include "resource.h"
 
 1 24 "app.manifest"
 
-112 ICON "app.ico"
+IDI_APP ICON "app.ico"
+
+1 VERSIONINFO
+FILEVERSION     1,0,0,0
+PRODUCTVERSION  1,0,0,0
+BEGIN
+  BLOCK "StringFileInfo"
+  BEGIN
+    BLOCK "040904B0"
+    BEGIN
+      VALUE "CompanyName",      "SCT"
+#ifdef PEARMOR_CLI
+      VALUE "FileDescription",  "PE-Armor vx.xy (Developers' Edition)"
+      VALUE "FileVersion",      "1.0.0.0"
+      VALUE "InternalName",     "pearmor-cli"
+      VALUE "OriginalFilename", "pearmor-cli.exe"
+      VALUE "ProductName",      "PE-Armor"
+#else
+      VALUE "FileDescription",  "PE-Armor vx.xy (Developers' Edition)"
+      VALUE "FileVersion",      "1.0.0.0"
+      VALUE "InternalName",     "pearmor"
+      VALUE "OriginalFilename", "pearmor.exe"
+      VALUE "ProductName",      "PE-Armor"
+#endif
+      VALUE "ProductVersion",   "1.0.0.0"
+      VALUE "LegalCopyright",   "SCT-PL"
+      VALUE "Author",           "Blue DeviL"
+    END
+  END
+  BLOCK "VarFileInfo"
+  BEGIN
+    VALUE "Translation", 0x0409, 0x04B0
+  END
+END
 
 113 MENU
 BEGIN
@@ -24,7 +57,7 @@ END
 101 DIALOG 0, 0, 280, 128
 STYLE 0x90ca0840
 MENU 113
-CAPTION "PE-Armor vx.xx (Special Edition)"
+CAPTION "PE-Armor vx.xy (Developers' Edition)"
 FONT 8, "MS Shell Dlg"
 BEGIN
     CONTROL "", 1019, "SysTabControl32", 0x0, 1, 0, 278, 127
@@ -55,6 +88,7 @@ BEGIN
     AUTOCHECKBOX "Force 0x200 alignment", 1012, 12, 41, 112, 10
     AUTOCHECKBOX "Ignore shared sections", 3026, 12, 54, 112, 10
     AUTOCHECKBOX "Create backup", 3024, 12, 67, 112, 10
+    AUTOCHECKBOX "Strip debug sections", 1030, 12, 80, 112, 10
     GROUPBOX     "Protection", -1, 138, 2, 128, 101
     AUTOCHECKBOX "Encrypt Import Table", 3016, 146, 15, 112, 10
     AUTOCHECKBOX "Remove relocation", 3021, 146, 26, 112, 10
@@ -72,12 +106,13 @@ STYLE 0x800008c0
 FONT 8, "MS Shell Dlg"
 BEGIN
     CONTROL "", -1, "STATIC", 0x50021001, 3, 3, 174, 80
-    CONTROL 112, -1, "STATIC", 0x50000003, 10, 12, 20, 20
-    CONTROL "hying's PE-Armor vx.xx", 1008, "STATIC", 0x50020001, 35, 8, 123, 9
+    CONTROL "", IDC_ABOUTICON, "STATIC", 0x50000003, 10, 12, 20, 20
+    CONTROL "hying's PE-Armor vx.xy", 1008, "STATIC", 0x50020001, 35, 8, 123, 9
     CONTROL "Author: Hying[CCG] 2002.1", -1, "STATIC", 0x50020001, 35, 19, 124, 9
     CONTROL "Modified by REPUBLiC, 2026.3", -1, "STATIC", 0x50020001, 35, 30, 126, 9
-    CONTROL "Special thanks to Hume, ljtt, IceBird", -1, "STATIC", 0x50020001, 5, 42, 170, 9
-    CONTROL "-", 1009, "STATIC", 0x50020001, 5, 54, 170, 9
-    CONTROL "forum.exetools.com", 1010, "STATIC", 0x50020001, 5, 66, 170, 9
+    CONTROL "Fix by Blue DeviL // SCT 2026.10", -1, "STATIC", 0x50020001, 35, 41, 126, 9
+    CONTROL "Special thanks to Hume, ljtt, IceBird", -1, "STATIC", 0x50020001, 5, 52, 170, 9
+    CONTROL "-", 1009, "STATIC", 0x50020001, 5, 63, 170, 9
+    CONTROL "forum.exetools.com", 1010, "STATIC", 0x50020001, 5, 74, 170, 9
     CONTROL "OK", 1, "BUTTON", 0x50018000, 65, 87, 50, 14
 END

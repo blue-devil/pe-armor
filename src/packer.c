@@ -1,9 +1,34 @@
 /*
- * PE-Armor vx.xx (Special Edition) - by REPUBLiC
- * Reverse Engineered by Blue DeviL // SCT
+ * _______________________________________________________________________
+ *|  ______ __          ,.'   __.'.__  .   ______               ___       |
+ *| |      |  |         /b`  '-.   .-'  d\|      ;             |   |      |
+ *| |   __ |  |        .5h     /.'.\    =5|   _   \            |   |      |
+ *| |.  1 \|  |        (0=h    '   '    =C)   1\   \        .--:.  |      |
+ *| |   1_/|  |        ?3==,          .==7|   | \   \       |__|   |      |
+ *| |.     | .-- -.-----{=`==oo____oo==`=}|   |  |.----.-- -.--:.  |      |
+ *| |.  __ | |  V |  ^__|'"o58888888888,; |.  |  ||  ^_|  V |  |.  |      |
+ *| |:  1 \|_|____|_____| `?88P^\,?88^\P  |.  | / |____|\___|__|:  |___   |
+ *| |:  1_/   /            C8?\__d88\_/'  |:  1/   / .         |:  1   |  |
+ *| |::.. .  /             `8o8888/\88P   |::.. . /            |::.. . |  |
+ *| `-------'               '7oo88oo8P    `------'             `-------'  |
+ *|                     Cooo##~\/\/\/~====>        github.com/blue-devil  |
+ *|                                                 gitlab.com/bluedevil  |
+ *| Freedom doesn't come from second-hand thoughts.                       |
+ *|_______________________________________________________________________|
+ *| @author   : Blue DeviL                                                |
+ *| @tester   : ErrorInside                                               |
+ *| @IDE      : Vi iMproved                                               |
+ *| @template : Blue DeviL                                                |
+ *| @date     : 30/10/2026                                                |
+ *| @license  : SCT-PL                                                    |
+ *|_______________________________________________________________________|
+ *|                                                                       |
+ *|                            PE-Armor vx.xy                             |
+ *|                          Developers' Edition                          |
+ *\_______________________________________________________________________/
  *
- * Originally created by hying[CCG], and released as v0.46 and written in asm.
- * REPUBLIC's modified PE-Armor packer `vx.xx` is an MSVC C++ rebuild.
+ * Reverse-engineered recreation of REPUBLIC's modified PE-Armor packer
+ * (original v0.46 by hying[CCG], masm32; vx.xx is an MSVC C++ rebuild).
  *
  * Packed-file format (matches the original byte-for-byte in structure):
  *
@@ -50,7 +75,7 @@
 /* option flags */
 static int g_Align200, g_ProtImp, g_PackRes, g_SaveSData, g_MergeSections,
     g_ClsSecName, g_NoReloc, g_CreateBak, g_DelShare, g_AnalyzeImmunity,
-    g_MemoryShield, g_BlacklistScan, g_HeaderShield;
+    g_MemoryShield, g_BlacklistScan, g_HeaderShield, g_StripDebug;
 
 static int g_Busy;
 static BYTE *g_image;
@@ -76,6 +101,7 @@ static int g_recCount;
 static BYTE *g_impBuf;
 static DWORD g_impSize;
 
+/* ------------------------------------------------------------------ */
 static void AddLine(HWND hDlg, const char *line)
 {
     if (!g_logBuf) return;
@@ -107,7 +133,7 @@ static void *ImgPtr(DWORD rva)
 
 static DWORD StrLenA(const char *s) { DWORD n = 0; while (s[n]) n++; return n; }
 
-
+/* ------------------------------------------------------------------ */
 static void IniPath(char *path)
 {
     char appdata[MAX_PATH];
@@ -139,6 +165,7 @@ static void ReadIni(void)
     RD(g_MemoryShield, "IsMemoryShield", 1);
     RD(g_BlacklistScan, "IsBlacklistScan", 0);
     RD(g_HeaderShield, "IsHeaderShield", 0);
+    RD(g_StripDebug, "StripDebug", 1);
 #undef RD
 }
 
@@ -158,6 +185,7 @@ static void LoadOptionsUI(HWND hDlg)
     CK(g_MemoryShield, IDC_MEMORYSHIELD);
     CK(g_BlacklistScan, IDC_BLACKLISTSCAN);
     CK(g_HeaderShield, IDC_HEADERSHIELD);
+    CK(g_StripDebug, IDC_STRIPDEBUG);
 #undef CK
 }
 
@@ -179,6 +207,7 @@ static void SaveOptionsUI(HWND hDlg)
     SV(g_MemoryShield, "IsMemoryShield");
     SV(g_BlacklistScan, "IsBlacklistScan");
     SV(g_HeaderShield, "IsHeaderShield");
+    SV(g_StripDebug, "StripDebug");
 #undef SV
 }
 
@@ -198,10 +227,11 @@ static void OptionsFromUI(HWND hDlg)
     GT(g_MemoryShield, IDC_MEMORYSHIELD);
     GT(g_BlacklistScan, IDC_BLACKLISTSCAN);
     GT(g_HeaderShield, IDC_HEADERSHIELD);
+    GT(g_StripDebug, IDC_STRIPDEBUG);
 #undef GT
 }
 
-
+/* ------------------------------------------------------------------ */
 static int CheckTarget(HWND hDlg)
 {
     HANDLE h, map;
@@ -242,6 +272,7 @@ static int CheckTarget(HWND hDlg)
     return 1;
 }
 
+/* ------------------------------------------------------------------ */
 /* custom obfuscated import table (matches the original blob format)   */
 static int BuildImpTable(HWND hDlg)
 {
@@ -328,6 +359,56 @@ static void ClearImport(void)
 }
 
 
+/* ------------------------------------------------------------------ */
+/* locate RT_MANIFEST in a mapped resource section; returns offset and
+   size within the section, or 0 when absent */
+static int ResFindManifest(BYTE *sec, DWORD secSize, DWORD *outOff, DWORD *outSize)
+{
+    DWORD base = 0;                    /* tree root at section start */
+    DWORD off, dataRva, size;
+    WORD i, named, ids;
+    IMAGE_RESOURCE_DIRECTORY *dir;
+    IMAGE_RESOURCE_DIRECTORY_ENTRY *e;
+    /* level 1: type 24 */
+    dir = (IMAGE_RESOURCE_DIRECTORY *)(sec + base);
+    named = dir->NumberOfNamedEntries;
+    ids = dir->NumberOfIdEntries;
+    e = (IMAGE_RESOURCE_DIRECTORY_ENTRY *)(sec + base + sizeof(*dir));
+    for (i = 0; i < named + ids; i++, e++) {
+        if ((e->Name & 0x80000000) || e->Id != 24)
+            continue;
+        /* level 2: first name entry */
+        off = e->OffsetToData & 0x7FFFFFFF;
+        dir = (IMAGE_RESOURCE_DIRECTORY *)(sec + off);
+        e = (IMAGE_RESOURCE_DIRECTORY_ENTRY *)(sec + off + sizeof(*dir));
+        if (dir->NumberOfNamedEntries + dir->NumberOfIdEntries == 0)
+            return 0;
+        /* level 3: first lang entry */
+        off = e->OffsetToData & 0x7FFFFFFF;
+        dir = (IMAGE_RESOURCE_DIRECTORY *)(sec + off);
+        e = (IMAGE_RESOURCE_DIRECTORY_ENTRY *)(sec + off + sizeof(*dir));
+        if (dir->NumberOfNamedEntries + dir->NumberOfIdEntries == 0)
+            return 0;
+        dataRva = e->OffsetToData;     /* leaf: points at IMAGE_RESOURCE_DATA_ENTRY */
+        {
+            IMAGE_RESOURCE_DATA_ENTRY *de;
+            DWORD leaf = dataRva;      /* already a direct data-entry offset */
+            if (leaf + sizeof(*de) > secSize)
+                return 0;
+            de = (IMAGE_RESOURCE_DATA_ENTRY *)(sec + leaf);
+            if (de->OffsetToData < (DWORD)(sec - g_image))
+                return 0;
+            *outOff = de->OffsetToData - (DWORD)(sec - g_image);
+            *outSize = de->Size;
+            if (*outOff + *outSize > secSize)
+                return 0;
+            return 1;
+        }
+    }
+    return 0;
+}
+
+/* ------------------------------------------------------------------ */
 static int __cdecl PackProgress(unsigned int total, unsigned int done)
 {
     if (g_hProgress && total)
@@ -335,7 +416,7 @@ static int __cdecl PackProgress(unsigned int total, unsigned int done)
     return 1;
 }
 
-
+/* ------------------------------------------------------------------ */
 /* section is compressible: name list, no import/export directory in   */
 static int SectionPackable(PIMAGE_SECTION_HEADER s)
 {
@@ -364,7 +445,7 @@ static void RandName(BYTE out[8])
     for (; i < 8; i++) out[i] = 0;
 }
 
-
+/* ------------------------------------------------------------------ */
 static int ProtectFile(HWND hDlg)
 {
     HANDLE hIn, hOut = INVALID_HANDLE_VALUE;
@@ -381,6 +462,8 @@ static int ProtectFile(HWND hDlg)
     DWORD sectionSize, stubRva, stubVs, stubRawOff;
     PIMAGE_SECTION_HEADER stubSec;
     DWORD headSize, cur, oep, imageBase;
+    DWORD resDirRva = 0;
+    int hasManifest = 0;
     DWORD tlsRva, tlsSize;
     int rc = 0;
 
@@ -488,13 +571,30 @@ static int ProtectFile(HWND hDlg)
         }
     }
 
+    /* strip debug sections (vx.xy): blank their raw data instead of
+       removing the entries - the ARM64 x86 loader rejects images with
+       virtual gaps between sections, so the VA layout must stay intact */
+    if (g_StripDebug) {
+        for (i = 0; i < g_numSec; i++) {
+            PIMAGE_SECTION_HEADER s = g_sec + i;
+            if (s->Name[0] == '/' || !strncmp((char *)s->Name, ".debug", 6)) {
+                s->SizeOfRawData = 0;
+                s->PointerToRawData = 0;
+                memset(s->Name, 0, sizeof(s->Name));
+                g_nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].VirtualAddress = 0;
+                g_nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_DEBUG].Size = 0;
+            }
+        }
+    }
+
     /* import table obfuscation is always on (matches the original) */
     if (!BuildImpTable(hDlg)) goto done;
     ClearImport();
     AddLine(hDlg, "Import table encrypted successfully.");
 
     if (g_nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_RESOURCE].VirtualAddress)
-        AddLine(hDlg, "Resources preserved in original section.");
+        AddLine(hDlg, g_PackRes ? "Resource section will be compressed."
+                                : "Resources preserved in original section.");
 
     AddLine(hDlg, "Starting data compression...");
     hOut = CreateFileA(g_fileName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ,
@@ -527,16 +627,103 @@ static int ProtectFile(HWND hDlg)
             }
             len = live;
         }
-        if (!SectionPackable(s)) {
-            /* stored raw */
-            DWORD sz = s->SizeOfRawData;
-            if (!WriteFile(hOut, data, sz, &bytesWritten, NULL) || bytesWritten != sz) {
-                AddLine(hDlg, "Error! File write failed!");
+        {
+            DWORD resRva = g_nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_RESOURCE].VirtualAddress;
+            DWORD span = s->Misc.VirtualSize > s->SizeOfRawData ? s->Misc.VirtualSize : s->SizeOfRawData;
+            int isRes = resRva && resRva >= s->VirtualAddress &&
+                        resRva - s->VirtualAddress < span;
+            int wantPack = SectionPackable(s) || (g_PackRes && isRes);
+            if (g_PackRes && isRes) {
+                /* vx.xy: compress the resource section but keep a valid
+                   manifest visible for the loader (it reads .rsrc before
+                   any code runs): [aP stream][minimal tree + manifest] */
+                DWORD vs = s->Misc.VirtualSize;
+                BYTE *src = data;
+                BYTE *apd = (BYTE *)VirtualAlloc(NULL, vs + 0x1000, MEM_COMMIT, PAGE_READWRITE);
+                BYTE *wm = (BYTE *)VirtualAlloc(NULL, aP_workmem_size(vs), MEM_COMMIT, PAGE_READWRITE);
+                DWORD apn = 0;
+                if (apd && wm)
+                    apn = aP_pack(src, apd, vs, wm, PackProgress, NULL);
+                if (wm) VirtualFree(wm, 0, MEM_RELEASE);
+                if (apn) {
+                    DWORD mOff = 0, mSize = 0;
+                    DWORD treeBase = (apn + 3) & ~3u;
+                    DWORD treeSize;
+                    DWORD rawSize;
+                    BYTE *out;
+                    hasManifest = ResFindManifest(src, vs, &mOff, &mSize);
+                    /* tree: root(16+8) type(16+8) name(16+8) lang(16+8) leaf(16) */
+                    treeSize = hasManifest ? (16+8)*4 + 16 + mSize : 16;
+                    rawSize = treeBase + treeSize;
+                    out = (BYTE *)calloc(AlignUp(rawSize, g_fileAlign), 1);
+                    if (out) {
+                        DWORD r = s->VirtualAddress;
+                        if (hasManifest) {
+                            struct { DWORD chars, stamp, majv, minv, named, ids; } *d;
+                            IMAGE_RESOURCE_DIRECTORY_ENTRY *e;
+                            DWORD leafRva, blobRva;
+                            d = (void *)(out + treeBase);
+                            d->named = 0; d->ids = 1;
+                            e = (IMAGE_RESOURCE_DIRECTORY_ENTRY *)(out + treeBase + 16);
+                            e->Id = 24; e->OffsetToData = 0x80000000 | (32);
+                            d = (void *)(out + treeBase + 32);
+                            d->named = 0; d->ids = 1;
+                            e = (IMAGE_RESOURCE_DIRECTORY_ENTRY *)(out + treeBase + 32 + 16);
+                            e->Id = 1; e->OffsetToData = 0x80000000 | (64);
+                            d = (void *)(out + treeBase + 64);
+                            d->named = 0; d->ids = 1;
+                            e = (IMAGE_RESOURCE_DIRECTORY_ENTRY *)(out + treeBase + 64 + 16);
+                            e->Id = 0x409; e->OffsetToData = (96);
+                            leafRva = r + treeBase + 96;
+                            blobRva = r + treeBase + 96 + 16;
+                            *(DWORD *)(out + treeBase + 96)     = blobRva;
+                            *(DWORD *)(out + treeBase + 96 + 4) = mSize;
+                            *(DWORD *)(out + treeBase + 96 + 8) = 0;
+                            *(DWORD *)(out + treeBase + 96 + 12) = 0;
+                            memcpy(out + treeBase + 96 + 16, src + mOff, mSize);
+                        } else {
+                            struct { DWORD chars, stamp, majv, minv, named, ids; } *d;
+                            d = (void *)(out + treeBase);
+                            d->named = 0; d->ids = 0;
+                        }
+                        memcpy(out, apd, apn);
+                        if (!WriteFile(hOut, out, AlignUp(rawSize, g_fileAlign), &bytesWritten, NULL)) {
+                            free(out);
+                            VirtualFree(apd, 0, MEM_RELEASE);
+                            AddLine(hDlg, "Error! File write failed!");
+                            goto done;
+                        }
+                        free(out);
+                        g_recs[g_recCount].vsize = vs;
+                        g_recs[g_recCount].rva = s->VirtualAddress;
+                        g_recs[g_recCount].packSize = apn;
+                        g_recCount++;
+                        AddLine(hDlg, "Resource section compressed.");
+                        s->SizeOfRawData = AlignUp(rawSize, g_fileAlign);
+                        s->PointerToRawData = cur;
+                        s->Characteristics |= 0xC0000000u;
+                        cur += s->SizeOfRawData;
+                        resDirRva = r + treeBase;
+                        VirtualFree(apd, 0, MEM_RELEASE);
+                        continue;
+                    }
+                    free(out);
+                }
+                if (apd) VirtualFree(apd, 0, MEM_RELEASE);
+                AddLine(hDlg, "Failed to compress data.");
                 goto done;
             }
-            s->PointerToRawData = cur;
-            cur += sz;
-            continue;
+            if (!wantPack) {
+                /* stored raw */
+                DWORD sz = s->SizeOfRawData;
+                if (!WriteFile(hOut, data, sz, &bytesWritten, NULL) || bytesWritten != sz) {
+                    AddLine(hDlg, "Error! File write failed!");
+                    goto done;
+                }
+                s->PointerToRawData = cur;
+                cur += sz;
+                continue;
+            }
         }
         {
             BYTE *copy = (BYTE *)VirtualAlloc(NULL, len, MEM_COMMIT, PAGE_READWRITE);
@@ -656,8 +843,9 @@ static int ProtectFile(HWND hDlg)
         for (i = 0; i < g_numSec; i++) {
             PIMAGE_SECTION_HEADER s = g_sec + i;
             DWORD span = s->Misc.VirtualSize > s->SizeOfRawData ? s->Misc.VirtualSize : s->SizeOfRawData;
-            if (resRva && resRva >= s->VirtualAddress && resRva - s->VirtualAddress < span)
-                continue; /* keep the resource section name */
+            int isRes = resRva && resRva >= s->VirtualAddress && resRva - s->VirtualAddress < span;
+            if (isRes && !g_PackRes)
+                continue; /* raw resource section keeps its name */
             RandName(s->Name);
         }
     }
@@ -680,6 +868,10 @@ static int ProtectFile(HWND hDlg)
     g_nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT].Size = 0x8C;
     g_nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IAT].VirtualAddress = 0;
     g_nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IAT].Size = 0;
+    if (resDirRva) {
+        g_nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_RESOURCE].VirtualAddress = resDirRva;
+        g_nt->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_RESOURCE].Size = 0x18;
+    }
     for (i = 0; i < 16; i++) {
         if (i == IMAGE_DIRECTORY_ENTRY_IMPORT || i == IMAGE_DIRECTORY_ENTRY_RESOURCE ||
             i == IMAGE_DIRECTORY_ENTRY_TLS)
@@ -692,6 +884,18 @@ static int ProtectFile(HWND hDlg)
     if (g_ClsSecName) {
         for (i = 0; i < g_numSec; i++)
             memset(g_sec[i].Name, 0, sizeof(g_sec[i].Name));
+    }
+
+    /* ---- clamp raw offsets the output no longer covers (dropped
+       all-zero sections can keep offsets beyond a shrunk file) ---- */
+    {
+        DWORD finalSize = stubRawOff + stubSec->SizeOfRawData + extraSize;
+        for (i = 0; i <= g_numSec; i++) {
+            PIMAGE_SECTION_HEADER s = g_sec + i;
+            if (s->SizeOfRawData == 0 &&
+                s->PointerToRawData && s->PointerToRawData >= finalSize)
+                s->PointerToRawData = 0;
+        }
     }
 
     /* ---- final writes ---- */
@@ -748,13 +952,31 @@ static unsigned int __stdcall ProtectThread(void *param)
     return 0;
 }
 
-
+/* ------------------------------------------------------------------ */
 static INT_PTR CALLBACK AboutProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
 {
     switch (msg) {
-    case WM_INITDIALOG:
+    case WM_INITDIALOG: {
+        HWND hIcon = GetDlgItem(hDlg, IDC_ABOUTICON);
+        RECT rc;
+        int cx, cy;
+        HICON ico;
+        GetClientRect(hIcon, &rc);
+        cx = rc.right - rc.left;
+        cy = rc.bottom - rc.top;
+        if (cx < 1) cx = GetSystemMetrics(SM_CXICON);
+        if (cy < 1) cy = GetSystemMetrics(SM_CYICON);
+        ico = (HICON)LoadImageA(g_hInst, MAKEINTRESOURCEA(IDI_APP), IMAGE_ICON, cx, cy, LR_DEFAULTCOLOR);
+        if (ico)
+            SendMessageA(hIcon, STM_SETICON, (WPARAM)ico, 0);
         SetDlgItemTextW(hDlg, IDC_ABOUTBOOK, L"\x300a\x52a0\x5bc6\x4e0e\x89e3\x5bc6\x300b(\x7b2c\x4e09\x7248)");
         return 1;
+    }
+    case WM_DESTROY: {
+        HICON ico = (HICON)SendDlgItemMessageA(hDlg, IDC_ABOUTICON, STM_GETICON, 0, 0);
+        if (ico) DestroyIcon(ico);
+        return 1;
+    }
     case WM_COMMAND:
         if (LOWORD(wp) == 1 || LOWORD(wp) == 2) { EndDialog(hDlg, 0); return 1; }
         break;
@@ -860,7 +1082,16 @@ static INT_PTR CALLBACK MainProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
     case WM_INITDIALOG:
         g_hMain = hDlg;
         g_logBuf = (char *)calloc(0x10000, 1);
-        SendMessageA(hDlg, WM_SETICON, ICON_BIG, (LPARAM)LoadIconA(g_hInst, MAKEINTRESOURCEA(IDI_APP)));
+        {
+            HICON big = (HICON)LoadImageA(g_hInst, MAKEINTRESOURCEA(IDI_APP), IMAGE_ICON,
+                GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), LR_SHARED);
+            HICON small = (HICON)LoadImageA(g_hInst, MAKEINTRESOURCEA(IDI_APP), IMAGE_ICON,
+                GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_SHARED);
+            SendMessageA(hDlg, WM_SETICON, ICON_BIG, (LPARAM)big);
+            SendMessageA(hDlg, WM_SETICON, ICON_SMALL, (LPARAM)small);
+            if (big) SetClassLongA(hDlg, GCL_HICON, (LONG)(LONG_PTR)big);
+            if (small) SetClassLongA(hDlg, GCL_HICONSM, (LONG)(LONG_PTR)small);
+        }
         EnableWindow(GetDlgItem(hDlg, IDC_PROTECT), FALSE);
         InitCommonControls();
         g_hTab = GetDlgItem(hDlg, IDC_TAB);
@@ -913,6 +1144,100 @@ static INT_PTR CALLBACK MainProc(HWND hDlg, UINT msg, WPARAM wp, LPARAM lp)
     return 0;
 }
 
+#ifdef PEARMOR_CLI
+
+static const char *const kCliBanner[] = {
+    "  _.--^--._                           ",
+    "|`  20:26  `|                         ",
+    "|  ___ ___  |   _                     ",
+    "|.| _ \\ __|.|  /_\\  _ _ _ __  ___ _ _ ",
+    "| |  _/ _|  | / _ \\| '_| '  \\/ _ \\ '_|",
+    "| |_| |___| |/_/ \\_\\_| |_|_|_\\___/_|  ",
+    "\\     :     /                   vxx.xy",
+    " \\    :    /                          ",
+    "  `-.SCT.-`                           ",
+    "      `                               ",
+};
+
+static void CliBanner(void)
+{
+    int i;
+    for (i = 0; i < (int)(sizeof(kCliBanner) / sizeof(kCliBanner[0])); i++)
+        puts(kCliBanner[i]);
+    putchar('\n');
+}
+
+static void CliUsage(void)
+{
+    printf("usage: pearmor-cli <file.exe> [options]\n\n");
+    printf("options (default in brackets):\n");
+    printf("  --strip-debug / --no-strip-debug   strip debug sections [on]\n");
+    printf("  --pack-res / --no-pack-res         compress the resource section [off]\n");
+    printf("  --bak / --no-bak                   create .bak backup [off]\n");
+    printf("  --save-sdata / --no-save-sdata     keep appended overlay data [off]\n");
+    printf("  --no-reloc / --keep-reloc          clear relocation data [off]\n");
+    printf("  --align200 / --no-align200         force 0x200 file alignment [off]\n");
+    printf("  --merge / --no-merge               merge compressible sections [off]\n");
+    printf("  --clsname / --no-clsname           randomize section names [off]\n");
+    printf("  --delshare / --no-delshare         drop shared section flag [off]\n");
+    printf("  --anti-debug / --no-anti-debug     anti-debug in packed file [on]\n");
+    printf("  --anti-dump / --no-anti-dump       anti-dump in packed file [on]\n");
+    printf("  --detect / --no-detect             debugger detection [off]\n");
+    printf("  --header / --no-header             header protection [off]\n");
+}
+
+int main(int argc, char **argv)
+{
+    int i;
+    g_hInst = GetModuleHandleA(NULL);
+    ReadIni();
+    CliBanner();
+    if (argc < 2 || !argv[1][0] || argv[1][0] == '-') {
+        CliUsage();
+        return 1;
+    }
+    lstrcpynA(g_fileName, argv[1], MAX_PATH);
+    for (i = 2; i < argc; i++) {
+        if (!stricmp(argv[i], "--strip-debug")) g_StripDebug = 1;
+        else if (!stricmp(argv[i], "--no-strip-debug")) g_StripDebug = 0;
+        else if (!stricmp(argv[i], "--pack-res")) g_PackRes = 1;
+        else if (!stricmp(argv[i], "--no-pack-res")) g_PackRes = 0;
+        else if (!stricmp(argv[i], "--bak")) g_CreateBak = 1;
+        else if (!stricmp(argv[i], "--no-bak")) g_CreateBak = 0;
+        else if (!stricmp(argv[i], "--save-sdata")) g_SaveSData = 1;
+        else if (!stricmp(argv[i], "--no-save-sdata")) g_SaveSData = 0;
+        else if (!stricmp(argv[i], "--no-reloc")) g_NoReloc = 1;
+        else if (!stricmp(argv[i], "--keep-reloc")) g_NoReloc = 0;
+        else if (!stricmp(argv[i], "--align200")) g_Align200 = 1;
+        else if (!stricmp(argv[i], "--no-align200")) g_Align200 = 0;
+        else if (!stricmp(argv[i], "--merge")) g_MergeSections = 1;
+        else if (!stricmp(argv[i], "--no-merge")) g_MergeSections = 0;
+        else if (!stricmp(argv[i], "--clsname")) g_ClsSecName = 1;
+        else if (!stricmp(argv[i], "--no-clsname")) g_ClsSecName = 0;
+        else if (!stricmp(argv[i], "--delshare")) g_DelShare = 1;
+        else if (!stricmp(argv[i], "--no-delshare")) g_DelShare = 0;
+        else if (!stricmp(argv[i], "--anti-debug")) g_AnalyzeImmunity = 1;
+        else if (!stricmp(argv[i], "--no-anti-debug")) g_AnalyzeImmunity = 0;
+        else if (!stricmp(argv[i], "--anti-dump")) g_MemoryShield = 1;
+        else if (!stricmp(argv[i], "--no-anti-dump")) g_MemoryShield = 0;
+        else if (!stricmp(argv[i], "--detect")) g_BlacklistScan = 1;
+        else if (!stricmp(argv[i], "--no-detect")) g_BlacklistScan = 0;
+        else if (!stricmp(argv[i], "--header")) g_HeaderShield = 1;
+        else if (!stricmp(argv[i], "--no-header")) g_HeaderShield = 0;
+        else { printf("unknown option: %s\n", argv[i]); CliUsage(); return 1; }
+    }
+    g_logBuf = (char *)calloc(0x10000, 1);
+    AddLine(NULL, g_fileName);
+    {
+        int ok = ProtectFile(NULL);
+        free(g_logBuf);
+        g_logBuf = NULL;
+        return ok ? 0 : 1;
+    }
+}
+
+#else /* GUI build */
+
 int main(int argc, char **argv)
 {
     MSG msg;
@@ -929,3 +1254,5 @@ int main(int argc, char **argv)
     (void)msg;
     return 0;
 }
+
+#endif /* PEARMOR_CLI */

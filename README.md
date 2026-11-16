@@ -1,12 +1,17 @@
-# PE-Armor vx.xx (Special Edition)
+# PE-Armor vx.xy (Developers' Edition)
 
-PE-Armor historically created and distributed by [CCG][01]. This built
-is created by `REPUBLiC` an exetools forum user. He didn't share
-source code unfortunately and his packer is also packed/protected.
+PE-Armor historically created and distributed by [CCG][01]. I have unpacked
+REPUBLIC's packed built, then reverse engineered and rewrite it with the same
+functionality and GUI; then make a small contribution to the tool. And finally
+open source it project.
 
-He made nice changes like support of windows 10/11 and english interface.
+The original PE-Armor first written in masm32 and only supports 32-bit binaries
+to be packed.
 
-Changelog:
+REPUBLiC already made nice changes like support of windows 10/11 and
+english interface.
+
+His Changelog:
 
 * English Interface.
 * Packed file supports compatible with Windows 10/11.
@@ -14,20 +19,46 @@ Changelog:
 * TLS-executable support (EXE and DLL)
 * Redesigned interface.
 
-## This repository
+I have added these contibutions:
 
-So I first unpacked this `packer.exe - vx.xx` then reverse engineered it
-and rewrite it. So this repo contains not REPUBliC's original sources
-intead they are reverse engineered by me.
+* Strip debug sections option (on by default): drops the DWARF/COFF debug
+  sections from the packed output, keeping the section VA layout intact
+  for the Windows 11 ARM64 x86 loader.
+* Compress resources option now really works: the original never wired
+  the checkbox up and always stored `.rsrc` raw. This build compresses
+  the whole resource section while keeping a minimal valid resource tree
+  with the manifest visible for the loader (it reads `.rsrc` before any
+  code runs); the stub restores the full section at load time.
+* Command line version `pearmor-cli.exe` for batch and script usage; run
+  `pearmor-cli` without arguments for the option list.
 
-Because i prefer MSYS2 environment in Windows, my build script builds the
-project by mingw-32.
+Read full [CHANGELOG](./CHANGELOG.md) for details.
+
+## Build
+
+> **IMPORTANT**: I am using MSYS2 for development in Windows platform.
+> My build scripts are configured for using MSYS2. Do not forget that.
+
+32-bit only, msys2 mingw32 toolchain:
+
+```bash
+build.bat        # or: sh build.sh  (from an msys2 shell)
+build.bat clean  # remove build outputs
+```
+
+Produces `build/pearmor.exe` (GUI) and `build/pearmor-cli.exe` (CLI).
+
+Example:
+
+```bash
+build/pearmor-cli.exe hello32.exe --pack-res --bak
+```
 
 ## Resources
 
 * [CCG - China Cracking Group][01]
 * [Exetools - PE-Armor vx.xx (Special Edition)][02]
-* [MSYS - Software Distribution and Building Platform for Windows][03]
+* [MSYS2 - Software Distribution and Building Platform for Windows][03]
 
 [01]: https://www.exechina.com/
 [02]: https://forum.exetools.com/showthread.php?t=21721

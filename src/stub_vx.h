@@ -1,4 +1,4 @@
-/* Extracted from unpacked version of vx.xx
+/* Authentic vx.xx stub templates extracted from the unpacked packer.exe
    (first stage at 0x403BF0, second stage at 0x403E6C). Do not edit. */
 #define STUB1_SIZE 0x27Cu
 #define STUB2_SIZE 0x7038u
