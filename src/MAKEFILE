@@ -1,7 +1,0 @@
-NAME=prot
-$(NAME).exe: $(NAME).obj $(NAME).res
-        c:\masm32\bin\Link  /SUBSYSTEM:WINDOWS /mapinfo:exports /mapinfo:lines /map:$(NAME).map /LIBPATH:d:\masm32\lib $(NAME).obj $(NAME).res 
-$(NAME).res: $(NAME).rc
-        c:\masm32\bin\rc $(NAME).rc
-$(NAME).obj: $(NAME).asm
-        c:\masm32\bin\ml /c /coff /Zd /Cp  $(NAME).asm

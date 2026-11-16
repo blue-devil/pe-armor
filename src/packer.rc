@@ -1,0 +1,83 @@
+// PE-Armor vx.xx recreated resources (exact original templates)
+#pragma code_page(65001)
+#include "resource.h"
+
+1 24 "app.manifest"
+
+112 ICON "app.ico"
+
+113 MENU
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&Open...", 40003
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit...", 40004
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About...", 40002
+    END
+END
+
+//===========================================================================
+101 DIALOG 0, 0, 280, 128
+STYLE 0x90ca0840
+MENU 113
+CAPTION "PE-Armor vx.xx (Special Edition)"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL "", 1019, "SysTabControl32", 0x0, 1, 0, 278, 127
+END
+
+//===========================================================================
+106 DIALOG 4, 14, 270, 108
+STYLE 0x40000044
+FONT 8, "MS Shell Dlg"
+BEGIN
+    EDITTEXT                                     3001,4,4,234,13,0x00001080,0x00000200
+    PUSHBUTTON                                   "...",1002,241,4,23,13
+    EDITTEXT                                     1000,4,20,260,55,0x002a1884,0x00000200
+    PUSHBUTTON                                   "Protect file",1013,4,79,58,14
+    PUSHBUTTON                                   "Exit",2,66,79,50,14
+    AUTOCHECKBOX                                 "Always on top",1020,124,81,62,10
+    CONTROL                                      "Progress1",3004,"msctls_progress32",0x50800001,4,96,260,9
+END
+
+//===========================================================================
+121 DIALOG 4, 14, 270, 108
+STYLE 0x40000044
+FONT 8, "MS Shell Dlg"
+BEGIN
+    GROUPBOX     "PE Header", -1, 4, 2, 128, 101
+    AUTOCHECKBOX "Clear section names", 3011, 12, 15, 112, 10
+    AUTOCHECKBOX "Merge sections", 3012, 12, 28, 112, 10
+    AUTOCHECKBOX "Force 0x200 alignment", 1012, 12, 41, 112, 10
+    AUTOCHECKBOX "Ignore shared sections", 3026, 12, 54, 112, 10
+    AUTOCHECKBOX "Create backup", 3024, 12, 67, 112, 10
+    GROUPBOX     "Protection", -1, 138, 2, 128, 101
+    AUTOCHECKBOX "Encrypt Import Table", 3016, 146, 15, 112, 10
+    AUTOCHECKBOX "Remove relocation", 3021, 146, 26, 112, 10
+    AUTOCHECKBOX "Compress resources", 3013, 146, 37, 112, 10
+    AUTOCHECKBOX "Keep appended data", 3015, 146, 48, 112, 10
+    AUTOCHECKBOX "Anti-Debug", 1021, 146, 59, 112, 10
+    AUTOCHECKBOX "Anti-Dump", 1022, 146, 70, 112, 10
+    AUTOCHECKBOX "Detect debugger", 1023, 146, 81, 112, 10
+    AUTOCHECKBOX "Protect header", 1024, 146, 92, 112, 10
+END
+
+//===========================================================================
+103 DIALOG 0, 0, 180, 106
+STYLE 0x800008c0
+FONT 8, "MS Shell Dlg"
+BEGIN
+    CONTROL "", -1, "STATIC", 0x50021001, 3, 3, 174, 80
+    CONTROL 112, -1, "STATIC", 0x50000003, 10, 12, 20, 20
+    CONTROL "hying's PE-Armor vx.xx", 1008, "STATIC", 0x50020001, 35, 8, 123, 9
+    CONTROL "Author: Hying[CCG] 2002.1", -1, "STATIC", 0x50020001, 35, 19, 124, 9
+    CONTROL "Modified by REPUBLiC, 2026.3", -1, "STATIC", 0x50020001, 35, 30, 126, 9
+    CONTROL "Special thanks to Hume, ljtt, IceBird", -1, "STATIC", 0x50020001, 5, 42, 170, 9
+    CONTROL "-", 1009, "STATIC", 0x50020001, 5, 54, 170, 9
+    CONTROL "forum.exetools.com", 1010, "STATIC", 0x50020001, 5, 66, 170, 9
+    CONTROL "OK", 1, "BUTTON", 0x50018000, 65, 87, 50, 14
+END
