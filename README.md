@@ -16,19 +16,19 @@ Changelog:
 
 ## This repository
 
-* `build/packer.exe` - the 32-bit recreation produced by `build.bat`.
-* `build/unpacked_packer.exe` - the unpacked original (see the tutorial).
-* `src/` - a from-scratch C recreation of the packer with the original
-  resources. `build.bat` (msys64 mingw32) writes `build\packer.exe`.
-  (msys64 mingw32). Reproduces the vx.xx packing format exactly:
-  aPLib-compressed sections, custom import obfuscation, TLS trampoline
-  and the two-stage `.stub` shell; verified byte-level against the
-  original packer's own output.
+So I first unpacked this `packer.exe - vx.xx` then reverse engineered it
+and rewrite it. So this repo contains not REPUBliC's original sources
+intead they are reverse engineered by me.
+
+Because i prefer MSYS2 environment in Windows, my build script builds the
+project by mingw-32.
 
 ## Resources
 
 * [CCG - China Cracking Group][01]
 * [Exetools - PE-Armor vx.xx (Special Edition)][02]
+* [MSYS - Software Distribution and Building Platform for Windows][03]
 
 [01]: https://www.exechina.com/
 [02]: https://forum.exetools.com/showthread.php?t=21721
+[03]: https://www.msys2.org/
